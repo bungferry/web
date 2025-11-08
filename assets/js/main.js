@@ -1,17 +1,17 @@
 /*
 * FILE: assets/js/main.js
-* Perbaikan Akhir: Menggunakan timer untuk reset isLoading agar Infinite Scroll tidak stuck.
+* Deskripsi: Logika utama untuk filter galeri, infinite scroll, dan lazy loading.
 */
 
 // --- Konfigurasi ---
 const PICSUM_BASE_URL = "https://picsum.photos";
 const INFINITE_SCROLL_CONFIG = {
+  // Ukuran gambar untuk Infinite Scroll
   design: ["1999/1452", "1931/1087"],
   branding: ["1887/2831", "1964/2455"],
   identity: ["2070/1380", "1887/2830"]
 };
-const LOAD_COUNT = 6; 
-const LOAD_RESET_DELAY = 1000; // 1 detik delay untuk reset isLoading (PENTING!)
+const LOAD_COUNT = 6; // Jumlah gambar yang dimuat per batch
 
 // --- Variabel State dan DOM ---
 let currentFilter = 'all';
@@ -20,79 +20,95 @@ const triggerElement = document.getElementById('infinite-scroll-trigger');
 const loadingSpinner = document.getElementById('loading-spinner');
 const initialBoxes = Array.from(document.querySelectorAll('.container .box'));
 let seedCounter = { design: 0, branding: 0, identity: 0 }; 
-let isLoading = false; 
+let isLoading = false; // Guard untuk mencegah double-load
 
 // --- Fungsi Helper ---
 
+// Fungsi untuk Toggle Menu Mobile
 window.myFunction = function() {
   const x = document.getElementById("myTopnav");
   x.classList.toggle("responsive");
 }
 
+// Fungsi untuk membuat elemen gambar baru (dengan Lazy Loading)
 function createImageBox(category, size, seed) {
     const box = document.createElement('div');
+    // Gambar baru dari JS selalu memiliki kelas 'show'
     box.className = `box ${category} show`; 
     
     const img = document.createElement('img');
     img.src = `${PICSUM_BASE_URL}/seed/${seed}/${size}`;
     img.alt = `${category} photo`;
-    img.loading = 'lazy'; 
+    img.loading = 'lazy'; // Menerapkan Lazy Loading
     
     box.appendChild(img);
     return box;
 }
 
-// --- Logika Infinite Scroll yang Diperbaiki ---
+// --- Logika Infinite Scroll ---
 
 function loadMoreImages() {
     if (currentFilter === 'all' || isLoading) return; 
     
     isLoading = true; 
-    if (loadingSpinner) loadingSpinner.style.display = 'block'; 
+    if (loadingSpinner) loadingSpinner.style.display = 'block'; // Tampilkan spinner
 
     const sizes = INFINITE_SCROLL_CONFIG[currentFilter];
     const newBoxes = []; 
     
-    // 1. Buat dan siapkan semua gambar baru
+    let imagesToLoad = LOAD_COUNT;
+    let loadedCount = 0;
+
+    const onImageLoadComplete = () => {
+        loadedCount++;
+        if (loadedCount === imagesToLoad) {
+            // Semua gambar telah dimuat/gagal dimuat, sembunyikan spinner
+            if (loadingSpinner) loadingSpinner.style.display = 'none';
+            isLoading = false;
+        }
+    };
+
     for (let i = 0; i < LOAD_COUNT; i++) {
         const randomSize = sizes[i % sizes.length]; 
         seedCounter[currentFilter]++;
         const seed = `iscroll-${currentFilter}-${seedCounter[currentFilter]}`;
         
         const newBox = createImageBox(currentFilter, randomSize, seed);
+        const newImage = newBox.querySelector('img');
+        
+        // Pasang event listener untuk melacak proses loading
+        newImage.addEventListener('load', onImageLoadComplete);
+        newImage.addEventListener('error', onImageLoadComplete);
+
         newBoxes.push(newBox);
     }
     
-    // 2. Sisipkan semua box baru ke DOM
+    // Sisipkan semua box baru ke DOM
     newBoxes.forEach(box => {
         galleryContainer.insertBefore(box, triggerElement);
     });
 
-    // 3. PENTING: Reset guard dan sembunyikan spinner menggunakan timer
-    // Ini adalah solusi paling andal agar scroll tidak stuck
-    setTimeout(() => {
-        if (loadingSpinner) loadingSpinner.style.display = 'none';
-        isLoading = false;
-        
-        // Opsional: Paksa reflow lagi setelah gambar dimuat
-        if (galleryContainer) {
-            galleryContainer.style.opacity = '0.999';
-            galleryContainer.style.opacity = '1'; 
-        }
-
-    }, LOAD_RESET_DELAY); 
+    // Fallback: Sembunyikan spinner setelah 5 detik jika ada masalah event listener
+    if (LOAD_COUNT > 0) {
+        setTimeout(() => {
+            if (isLoading) { 
+                if (loadingSpinner) loadingSpinner.style.display = 'none';
+                isLoading = false;
+            }
+        }, 5000); 
+    }
 }
 
-// Inisialisasi Intersection Observer (tetap sama)
+// Inisialisasi Intersection Observer
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-        if (entry.isIntersecting && currentFilter !== 'all' && !isLoading) {
+        if (entry.isIntersecting && currentFilter !== 'all') {
             loadMoreImages();
         }
     });
 }, {
     root: null, 
-    rootMargin: '200px', 
+    rootMargin: '200px', // Memuat gambar saat trigger berjarak 200px dari viewport
     threshold: 0.1
 });
 
@@ -100,7 +116,7 @@ if (triggerElement) {
     observer.observe(triggerElement);
 }
 
-// --- Fungsi Filter TABS (tetap sama) ---
+// --- Fungsi Filter TABS ---
 
 function filterSelection(c, btn) {
     currentFilter = c;
@@ -110,7 +126,7 @@ function filterSelection(c, btn) {
     document.querySelectorAll("#tabs .btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
 
-    // 2. Tampilkan/Sembunyikan Gambar Statis
+    // 2. Tampilkan/Sembunyikan Gambar Statis (8 gambar awal dari Liquid)
     initialBoxes.forEach(box => {
         box.classList.remove('show');
         if (c === 'all' || box.classList.contains(c)) {
@@ -127,8 +143,7 @@ function filterSelection(c, btn) {
     
     // 4. Jika beralih ke kategori, muat batch gambar awal (Infinite Scroll)
     if (c !== 'all') {
-         seedCounter[c] = 0; 
-         // Panggil loadMoreImages untuk memuat batch pertama setelah filter
+         seedCounter[c] = 0; // Reset seed counter
          loadMoreImages(); 
     } else {
         // Pastikan spinner disembunyikan jika kembali ke 'All'
@@ -136,7 +151,7 @@ function filterSelection(c, btn) {
         isLoading = false;
     }
     
-    // Paksa reflow
+    // Paksa reflow untuk memperbaiki tata letak kolom (masonry/CSS columns)
     setTimeout(() => {
         if (galleryContainer) {
             galleryContainer.style.opacity = '0.99'; 
@@ -155,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // 2. Panggil filter 'all' saat startup
+    // 2. Panggil filter 'all' saat startup untuk memastikan 8 gambar awal muncul
     const defaultBtn = document.querySelector('#tabs .btn[data-filter="all"]');
     if(defaultBtn) filterSelection('all', defaultBtn);
 });
