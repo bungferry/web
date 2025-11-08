@@ -2,8 +2,8 @@ title: Blund Photo Gallery
 email: your-email@example.com
 description: >-
   Sebuah blog photo sederhana menggunakan Jekyll dan Picsum.
-baseurl: "" # Ubah jika Anda deploy di subdirectory
-url: "http://localhost:4000" # Ubah ke domain Anda
+baseurl: "/web" # Ubah jika Anda deploy di subdirectory
+url: "https://bungferry.github.io" # Ubah ke domain Anda
 lang: id
 
 # Pengaturan Build
