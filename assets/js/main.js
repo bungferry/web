@@ -1,105 +1,58 @@
-/*
-* FILE: assets/js/main.js
-* Deskripsi: Logika utama untuk filter galeri, infinite scroll, dan lazy loading.
-*/
-
 // --- Konfigurasi ---
+// Data dari _data/gallery.yml akan di-pass via 'data-config' di index.html jika ini web langsung,
+// tapi karena ini Jekyll, kita akan hardcode config untuk demo JS ini, atau menggunakan trik 
+// Liquid/JS. Untuk kesederhanaan, kita akan anggap config di bawah sudah tersedia.
 const PICSUM_BASE_URL = "https://picsum.photos";
 const INFINITE_SCROLL_CONFIG = {
-  // Ukuran gambar untuk Infinite Scroll
   design: ["1999/1452", "1931/1087"],
   branding: ["1887/2831", "1964/2455"],
   identity: ["2070/1380", "1887/2830"]
 };
-const LOAD_COUNT = 6; // Jumlah gambar yang dimuat per batch
+const LOAD_COUNT = 6; // Jumlah gambar yang dimuat setiap kali scroll
 
-// --- Variabel State dan DOM ---
+// --- Variabel State ---
 let currentFilter = 'all';
 const galleryContainer = document.getElementById('gallery-container');
 const triggerElement = document.getElementById('infinite-scroll-trigger');
-const loadingSpinner = document.getElementById('loading-spinner');
 const initialBoxes = Array.from(document.querySelectorAll('.container .box'));
-let seedCounter = { design: 0, branding: 0, identity: 0 }; 
-let isLoading = false; // Guard untuk mencegah double-load
+let seedCounter = { // Untuk memastikan gambar Picsum berbeda setiap kali muat
+    design: 0, 
+    branding: 0, 
+    identity: 0
+}; 
 
-// --- Fungsi Helper ---
+// --- Fungsi Utama ---
 
-// Fungsi untuk Toggle Menu Mobile
-window.myFunction = function() {
-  const x = document.getElementById("myTopnav");
-  x.classList.toggle("responsive");
-}
-
-// Fungsi untuk membuat elemen gambar baru (dengan Lazy Loading)
-function createImageBox(category, size, seed) {
-    const box = document.createElement('div');
-    // Gambar baru dari JS selalu memiliki kelas 'show'
-    box.className = `box ${category} show`; 
-    
-    const img = document.createElement('img');
-    img.src = `${PICSUM_BASE_URL}/seed/${seed}/${size}`;
-    img.alt = `${category} photo`;
-    img.loading = 'lazy'; // Menerapkan Lazy Loading
-    
-    box.appendChild(img);
-    return box;
-}
-
-// --- Logika Infinite Scroll ---
-
+// Fungsi untuk memuat dan menambahkan gambar baru
 function loadMoreImages() {
-    if (currentFilter === 'all' || isLoading) return; 
-    
-    isLoading = true; 
-    if (loadingSpinner) loadingSpinner.style.display = 'block'; // Tampilkan spinner
+    if (currentFilter === 'all') return; // Hanya Infinite Scroll untuk kategori
 
     const sizes = INFINITE_SCROLL_CONFIG[currentFilter];
-    const newBoxes = []; 
-    
-    let imagesToLoad = LOAD_COUNT;
-    let loadedCount = 0;
-
-    const onImageLoadComplete = () => {
-        loadedCount++;
-        if (loadedCount === imagesToLoad) {
-            // Semua gambar telah dimuat/gagal dimuat, sembunyikan spinner
-            if (loadingSpinner) loadingSpinner.style.display = 'none';
-            isLoading = false;
-        }
-    };
+    if (!sizes || sizes.length === 0) return;
 
     for (let i = 0; i < LOAD_COUNT; i++) {
-        const randomSize = sizes[i % sizes.length]; 
+        // Pilih ukuran gambar secara acak dan tingkatkan seed counter
+        const randomSize = sizes[Math.floor(Math.random() * sizes.length)];
         seedCounter[currentFilter]++;
         const seed = `iscroll-${currentFilter}-${seedCounter[currentFilter]}`;
-        
-        const newBox = createImageBox(currentFilter, randomSize, seed);
-        const newImage = newBox.querySelector('img');
-        
-        // Pasang event listener untuk melacak proses loading
-        newImage.addEventListener('load', onImageLoadComplete);
-        newImage.addEventListener('error', onImageLoadComplete);
+        const imageUrl = `${PICSUM_BASE_URL}/seed/${seed}/${randomSize}`;
 
-        newBoxes.push(newBox);
-    }
-    
-    // Sisipkan semua box baru ke DOM
-    newBoxes.forEach(box => {
+        // Buat elemen gambar
+        const box = document.createElement('div');
+        box.className = `box ${currentFilter} show`; // Tambahkan kelas 'show' agar langsung terlihat
+
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.alt = `${currentFilter} photo ${seedCounter[currentFilter]}`;
+        
+        box.appendChild(img);
+        
+        // Sisipkan sebelum elemen trigger
         galleryContainer.insertBefore(box, triggerElement);
-    });
-
-    // Fallback: Sembunyikan spinner setelah 5 detik jika ada masalah event listener
-    if (LOAD_COUNT > 0) {
-        setTimeout(() => {
-            if (isLoading) { 
-                if (loadingSpinner) loadingSpinner.style.display = 'none';
-                isLoading = false;
-            }
-        }, 5000); 
     }
 }
 
-// Inisialisasi Intersection Observer
+// Inisialisasi Intersection Observer untuk Infinite Scroll
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting && currentFilter !== 'all') {
@@ -107,70 +60,92 @@ const observer = new IntersectionObserver((entries) => {
         }
     });
 }, {
-    root: null, 
-    rootMargin: '200px', // Memuat gambar saat trigger berjarak 200px dari viewport
+    root: null, // viewport
+    rootMargin: '0px',
     threshold: 0.1
 });
 
+// Mulai mengamati elemen trigger
 if (triggerElement) {
     observer.observe(triggerElement);
 }
 
-// --- Fungsi Filter TABS ---
+// --- Fungsi Filter dan Navigasi ---
 
+// Fungsi filter yang dimodifikasi untuk menangani tampilan Infinite Scroll
 function filterSelection(c, btn) {
     currentFilter = c;
     const allBoxes = Array.from(document.querySelectorAll('.container .box'));
-    
-    // 1. Perbarui tombol aktif
-    document.querySelectorAll("#tabs .btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
+    const boxesToHide = allBoxes.filter(box => !box.classList.contains(currentFilter));
+    const boxesToShow = allBoxes.filter(box => box.classList.contains(currentFilter));
 
-    // 2. Tampilkan/Sembunyikan Gambar Statis (8 gambar awal dari Liquid)
-    initialBoxes.forEach(box => {
-        box.classList.remove('show');
-        if (c === 'all' || box.classList.contains(c)) {
+    if (c === 'all') {
+        // Tampilkan hanya 8 gambar statis (yang merupakan initialBoxes)
+        initialBoxes.forEach(box => {
             box.classList.add('show');
-        }
-    });
+        });
+        
+        // Hapus semua gambar yang dimuat oleh Infinite Scroll
+        allBoxes.forEach(box => {
+            if (!initialBoxes.includes(box)) {
+                box.remove();
+            }
+        });
 
-    // 3. Kelola Gambar Dinamis (Hapus gambar dari filter lama)
-    allBoxes.forEach(box => {
-        if (!initialBoxes.includes(box)) {
-            box.remove(); 
-        }
-    });
-    
-    // 4. Jika beralih ke kategori, muat batch gambar awal (Infinite Scroll)
-    if (c !== 'all') {
-         seedCounter[c] = 0; // Reset seed counter
-         loadMoreImages(); 
     } else {
-        // Pastikan spinner disembunyikan jika kembali ke 'All'
-        if (loadingSpinner) loadingSpinner.style.display = 'none';
-        isLoading = false;
+        // Sembunyikan semua yang tidak sesuai filter
+        allBoxes.forEach(box => {
+            box.classList.remove('show');
+        });
+        // Tampilkan yang sesuai filter (ini mencakup 8 gambar statis yang cocok)
+        boxesToShow.forEach(box => {
+            box.classList.add('show');
+        });
+
+        // Hapus gambar dari filter lain yang tidak lagi diperlukan, 
+        // tapi pastikan 8 gambar statis dipertahankan
+        allBoxes.forEach(box => {
+            if (!initialBoxes.includes(box) && !box.classList.contains(c)) {
+                box.remove();
+            }
+        });
+        
+        // Memuat beberapa gambar awal untuk Infinite Scroll saat pertama kali beralih
+        if (document.querySelectorAll(`.container .box.${c}`).length <= initialBoxes.length / 4) {
+             loadMoreImages(); 
+        }
     }
     
-    // Paksa reflow untuk memperbaiki tata letak kolom (masonry/CSS columns)
+    // Perbarui tombol aktif
+    const current = document.querySelector("#tabs .btn.active");
+    if (current) current.classList.remove("active");
+    if (btn) btn.classList.add("active");
+    
+    // Perlu pembaruan layout untuk menghindari masalah kolom
     setTimeout(() => {
-        if (galleryContainer) {
-            galleryContainer.style.opacity = '0.99'; 
-            galleryContainer.style.opacity = '1'; 
-        }
+        galleryContainer.style.display = 'none';
+        galleryContainer.offsetHeight; // force reflow
+        galleryContainer.style.display = 'block';
     }, 50); 
 }
 
-// --- Inisialisasi ---
-
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Pasang event listener ke tombol tab
-    document.querySelectorAll("#tabs .btn").forEach(button => {
-        button.addEventListener('click', function() {
-            filterSelection(this.getAttribute('data-filter'), this);
-        });
+// Tambahkan event listener ke tombol tab
+document.querySelectorAll("#tabs .btn").forEach(button => {
+    button.addEventListener('click', function() {
+        filterSelection(this.getAttribute('data-filter'), this);
     });
-    
-    // 2. Panggil filter 'all' saat startup untuk memastikan 8 gambar awal muncul
-    const defaultBtn = document.querySelector('#tabs .btn[data-filter="all"]');
-    if(defaultBtn) filterSelection('all', defaultBtn);
+});
+
+// Inisialisasi filter ke "All" saat halaman dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    filterSelection('all', document.querySelector('#tabs .btn.active'));
+    // Inisialisasi menu topnav (fungsi myFunction dari kode demo)
+    window.myFunction = function() {
+      var x = document.getElementById("myTopnav");
+      if (x.className === "topnav") {
+        x.className += " responsive";
+      } else {
+        x.className = "topnav";
+      }
+    }
 });
