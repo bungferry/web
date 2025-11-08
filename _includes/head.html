@@ -173,25 +173,25 @@ footer div::before {
     background: #ddd;
     display: block;
 }
-/*#gallery-container {
-  display: flex;
-  flex-wrap: wrap;
-}*/
-#infinite-scroll-trigger {
-  width: 100%;
-  height: 100px;
+/* Animasi Fade-In — versi yang benar */
+.box {
+  opacity: 1;
+  transform: scale(1);
 }
-    /* Animasi Fade-In */
-.fade-in {
+
+/* state awal saat baru dibuat / ingin di-animate */
+.box.fade-in {
   opacity: 0;
   transform: scale(0.97);
   transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
-.box.show.fade-in {
+/* state akhir (ditrigger oleh JS dengan menambahkan .show) */
+.box.fade-in.show {
   opacity: 1;
   transform: scale(1);
 }
+
 
 @media screen and (max-width: 43.75rem) {
     .topnav .menu a {
