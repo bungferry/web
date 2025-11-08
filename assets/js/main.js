@@ -5,7 +5,7 @@ const INFINITE_SCROLL_CONFIG = {
   branding: ["1887/2831", "1964/2455"],
   identity: ["2070/1380", "1887/2830"]
 };
-const LOAD_COUNT = 6; // jumlah gambar yang dimuat setiap batch
+const LOAD_COUNT = 6; // jumlah gambar per batch
 
 // --- Variabel State ---
 let currentFilter = "all";
@@ -18,7 +18,7 @@ let seedCounter = {
   identity: 0
 };
 
-// --- Fungsi Utama ---
+// --- Fungsi untuk memuat gambar baru ---
 function loadMoreImages() {
   if (currentFilter === "all") return;
 
@@ -31,13 +31,18 @@ function loadMoreImages() {
     const seed = `iscroll-${currentFilter}-${seedCounter[currentFilter]}`;
     const imageUrl = `${PICSUM_BASE_URL}/seed/${seed}/${randomSize}`;
 
-    // buat elemen gambar
+    // buat elemen box + gambar
     const box = document.createElement("div");
-    box.className = `box ${currentFilter} show`;
+    box.className = `box ${currentFilter} show fade-in`;
 
     const img = document.createElement("img");
     img.src = imageUrl;
     img.alt = `${currentFilter} photo ${seedCounter[currentFilter]}`;
+
+    // hilangkan efek fade-in setelah animasi selesai
+    img.onload = () => {
+      setTimeout(() => box.classList.remove("fade-in"), 600);
+    };
 
     box.appendChild(img);
 
@@ -66,7 +71,7 @@ const observer = new IntersectionObserver(
   }
 );
 
-// pastikan trigger selalu diamati
+// pastikan trigger diamati
 if (triggerElement) {
   observer.observe(triggerElement);
 } else {
@@ -77,32 +82,24 @@ if (triggerElement) {
 function filterSelection(c, btn) {
   currentFilter = c;
   const allBoxes = Array.from(document.querySelectorAll(".container .box"));
-  const boxesToHide = allBoxes.filter((box) => !box.classList.contains(c));
   const boxesToShow = allBoxes.filter((box) => box.classList.contains(c));
 
   if (c === "all") {
-    // tampilkan hanya 8 gambar awal
-    initialBoxes.forEach((box) => {
-      box.classList.add("show");
-    });
+    // tampilkan 8 gambar awal
+    initialBoxes.forEach((box) => box.classList.add("show"));
     allBoxes.forEach((box) => {
-      if (!initialBoxes.includes(box)) {
-        box.remove();
-      }
+      if (!initialBoxes.includes(box)) box.remove();
     });
   } else {
-    // sembunyikan semua dulu
+    // sembunyikan semua
     allBoxes.forEach((box) => box.classList.remove("show"));
+    // tampilkan yang cocok
     boxesToShow.forEach((box) => box.classList.add("show"));
-
-    // hapus elemen hasil scroll dari kategori lain
+    // hapus gambar kategori lain
     allBoxes.forEach((box) => {
-      if (!initialBoxes.includes(box) && !box.classList.contains(c)) {
-        box.remove();
-      }
+      if (!initialBoxes.includes(box) && !box.classList.contains(c)) box.remove();
     });
-
-    // selalu load batch pertama saat berpindah tab kategori
+    // batch awal untuk kategori
     loadMoreImages();
   }
 
@@ -112,7 +109,7 @@ function filterSelection(c, btn) {
   if (btn) btn.classList.add("active");
 }
 
-// --- Event Listener untuk tab ---
+// --- Event Listener Tab ---
 document.querySelectorAll("#tabs .btn").forEach((button) => {
   button.addEventListener("click", function () {
     filterSelection(this.getAttribute("data-filter"), this);
@@ -122,18 +119,10 @@ document.querySelectorAll("#tabs .btn").forEach((button) => {
 // --- Inisialisasi ---
 document.addEventListener("DOMContentLoaded", () => {
   filterSelection("all", document.querySelector("#tabs .btn.active"));
-  // fungsi menu responsif (optional)
+  // menu responsif opsional
   window.myFunction = function () {
     const x = document.getElementById("myTopnav");
-    if (x.className === "topnav") {
-      x.className += " responsive";
-    } else {
-      x.className = "topnav";
-    }
+    x.className = x.className === "topnav" ? "topnav responsive" : "topnav";
   };
-
-  // pastikan trigger terlihat (khusus desktop)
-  if (triggerElement) {
-    triggerElement.style.minHeight = "100px";
-  }
+  if (triggerElement) triggerElement.style.minHeight = "100px";
 });
