@@ -1,4 +1,17 @@
-title: "Blund Photo Blog"
-description: "I blend design & functionality to create something awesome"
-baseurl: ""
-url: ""
+title: Blund Photo Gallery
+email: your-email@example.com
+description: >-
+  Sebuah blog photo sederhana menggunakan Jekyll dan Picsum.
+baseurl: "" # Ubah jika Anda deploy di subdirectory
+url: "http://localhost:4000" # Ubah ke domain Anda
+lang: id
+
+# Pengaturan Build
+sass:
+  style: compressed
+
+# Exclude files
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
