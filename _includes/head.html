@@ -1,0 +1,208 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.title | default: site.title }}</title>
+<style>
+/* CSS Anda dari demo JSBIN */
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap");
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css");
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    font-family: "Quicksand", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-style: normal;
+    color: #333;
+}
+a {
+    text-decoration: none;
+}
+h2, p {
+    line-height: 1.4;
+}
+.topnav {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 2.5rem 0;
+    width: calc(min(87.5rem, 90%));
+    margin: 0 auto;
+}
+.topnav-logo {
+    margin-right: auto;
+}
+.topnav-logo a {
+    font-size: 1.6rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #333;
+}
+.topnav .menu {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+.topnav .menu a {
+    display: block;
+    color: #333;
+    text-align: center;
+    font-size: 1rem;
+    text-transform: uppercase;
+    position: relative;
+}
+.topnav .menu a::after {
+    position: absolute;
+    content: "";
+    bottom: -0.313rem;
+    left: 0;
+    width: 0;
+    height: 0.069rem;
+    background: #333;
+    display: block;
+    transition: width 0.2s ease-in;
+}
+.topnav .menu .icon {
+    display: none !important;
+}
+.topnav .menu a:hover::after {
+    width: 100%;
+}
+.topnav .menu a.active:after {
+    width: 100%;
+}
+main {
+    width: calc(min(87.5rem, 90%));
+    margin: 0 auto;
+}
+main h2 {
+    margin: 1.5em 0;
+    font-weight: 500;
+    font-size: clamp(1.4rem, 2.3rem, 2.3rem);
+}
+main #tabs {
+    margin: 5em 0 2.2em 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1em;
+}
+main #tabs .btn {
+    border: none;
+    outline: none;
+    cursor: pointer;
+    font-weight: 400;
+    background: transparent;
+    padding: 0;
+    font-size: 1rem;
+    color: #333;
+}
+main #tabs .btn:hover {
+    font-weight: bold;
+}
+main #tabs .btn.active {
+    color: #333;
+    font-weight: bold;
+}
+main .container {
+    columns: 3 15.625rem;
+    column-gap: 1.25rem;
+}
+main .container .box {
+    width: 100%;
+    margin-bottom: 0.938em;
+    break-inside: avoid;
+    display: none;
+    /* Tambahkan transisi agar gambar baru tidak terlalu kaget */
+    opacity: 0; 
+    transition: opacity 0.5s ease;
+}
+main .container .box img {
+    max-width: 100%;
+    /* Tambahkan block untuk mencegah margin bawah tak terduga */
+    display: block;
+}
+main .container .show {
+    display: block;
+    opacity: 1; /* Tampilkan dengan fade-in */
+}
+#infinite-scroll-trigger {
+    height: 50px; /* Area untuk memicu loading */
+    width: 100%;
+    break-inside: avoid;
+}
+footer {
+    padding: 4rem 0 2em;
+    width: calc(min(87.5rem, 90%));
+    margin: 0 auto;
+}
+footer p {
+    margin-right: 1em;
+}
+footer ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 1em;
+}
+footer ul a {
+    text-transform: capitalize;
+    color: #333;
+}
+footer ul a:hover {
+    text-decoration: underline;
+}
+footer div {
+    flex-wrap: wrap;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+footer div::before {
+    position: absolute;
+    content: "";
+    top: -1.875rem;
+    left: 0;
+    width: 100%;
+    height: 0.063rem;
+    background: #ddd;
+    display: block;
+}
+@media screen and (max-width: 43.75rem) {
+    .topnav .menu a {
+        display: none;
+    }
+    .topnav .menu a.icon {
+        float: right;
+        display: block !important;
+    }
+    .topnav .menu a.icon:hover::after {
+        width: 0;
+    }
+    .topnav .menu {
+        flex-direction: column;
+    }
+    .topnav.responsive {
+        position: relative;
+        flex-direction: column;
+    }
+    .topnav.responsive .icon {
+        position: absolute;
+        right: 0;
+        top: 2.875rem;
+    }
+    .topnav.responsive a {
+        display: block;
+        text-align: left;
+    }
+    main .container {
+        columns: 2 10rem;
+        column-gap: 1rem;
+    }
+}
+  </style>
