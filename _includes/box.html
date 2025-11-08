@@ -1,0 +1,11 @@
+<div class="box {{ include.category }}">
+  {% comment %}
+    Picsum URL format: https://picsum.photos/seed/{seed_number}/{width}/{height}
+    Kami menggunakan J-D-N-X (Jekyll-Data-Number-Index) sebagai seed untuk memastikan gambar unik untuk setiap kategori pada tab "All".
+    Untuk Infinite Scroll, seed akan ditangani oleh JS.
+  {% endcomment %}
+  <img 
+    src="{{ site.data.gallery.picsum_base_url }}/seed/jdni-{{ include.category | slice: 0, 1 }}-{{ include.index }}/{{ include.size }}" 
+    alt="Photo {{ include.category }} {{ include.index }}"
+  >
+</div>
