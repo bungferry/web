@@ -1,179 +1,151 @@
-/*
-* FILE: assets/js/main.js
-* Perbaikan Akhir V2: Menggunakan Intersection Observer sebagai primary
-* dan menambah Fallback Scroll Listener untuk mengatasi masalah stuck/macet.
-*/
-
 // --- Konfigurasi ---
+// Data dari _data/gallery.yml akan di-pass via 'data-config' di index.html jika ini web langsung,
+// tapi karena ini Jekyll, kita akan hardcode config untuk demo JS ini, atau menggunakan trik 
+// Liquid/JS. Untuk kesederhanaan, kita akan anggap config di bawah sudah tersedia.
 const PICSUM_BASE_URL = "https://picsum.photos";
 const INFINITE_SCROLL_CONFIG = {
   design: ["1999/1452", "1931/1087"],
   branding: ["1887/2831", "1964/2455"],
   identity: ["2070/1380", "1887/2830"]
 };
-const LOAD_COUNT = 6; 
-const LOAD_RESET_DELAY = 1000; // 1 detik delay untuk reset isLoading
-const SCROLL_THRESHOLD = 500; // Jarak (piksel) dari bawah halaman untuk memicu fallback
+const LOAD_COUNT = 6; // Jumlah gambar yang dimuat setiap kali scroll
 
-// --- Variabel State dan DOM ---
+// --- Variabel State ---
 let currentFilter = 'all';
 const galleryContainer = document.getElementById('gallery-container');
 const triggerElement = document.getElementById('infinite-scroll-trigger');
 const initialBoxes = Array.from(document.querySelectorAll('.container .box'));
-let seedCounter = { design: 0, branding: 0, identity: 0 }; 
-let isLoading = false; 
+let seedCounter = { // Untuk memastikan gambar Picsum berbeda setiap kali muat
+    design: 0, 
+    branding: 0, 
+    identity: 0
+}; 
 
-// --- Fungsi Helper ---
+// --- Fungsi Utama ---
 
-window.myFunction = function() {
-  const x = document.getElementById("myTopnav");
-  x.classList.toggle("responsive");
-}
-
-function createImageBox(category, size, seed) {
-    const box = document.createElement('div');
-    box.className = `box ${category} show`; 
-    
-    const img = document.createElement('img');
-    img.src = `${PICSUM_BASE_URL}/seed/${seed}/${size}`;
-    img.alt = `${category} photo`;
-    img.loading = 'lazy'; 
-    
-    box.appendChild(img);
-    return box;
-}
-
-// --- Logika Infinite Scroll ---
-
+// Fungsi untuk memuat dan menambahkan gambar baru
 function loadMoreImages() {
-    if (currentFilter === 'all' || isLoading) return; 
-    
-    isLoading = true; 
+    if (currentFilter === 'all') return; // Hanya Infinite Scroll untuk kategori
 
     const sizes = INFINITE_SCROLL_CONFIG[currentFilter];
-    const newBoxes = []; 
-    
-    // 1. Buat dan siapkan semua gambar baru
+    if (!sizes || sizes.length === 0) return;
+
     for (let i = 0; i < LOAD_COUNT; i++) {
-        const randomSize = sizes[i % sizes.length]; 
+        // Pilih ukuran gambar secara acak dan tingkatkan seed counter
+        const randomSize = sizes[Math.floor(Math.random() * sizes.length)];
         seedCounter[currentFilter]++;
         const seed = `iscroll-${currentFilter}-${seedCounter[currentFilter]}`;
+        const imageUrl = `${PICSUM_BASE_URL}/seed/${seed}/${randomSize}`;
+
+        // Buat elemen gambar
+        const box = document.createElement('div');
+        box.className = `box ${currentFilter} show`; // Tambahkan kelas 'show' agar langsung terlihat
+
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.alt = `${currentFilter} photo ${seedCounter[currentFilter]}`;
         
-        const newBox = createImageBox(currentFilter, randomSize, seed);
-        newBoxes.push(newBox);
-    }
-    
-    // 2. Sisipkan semua box baru ke DOM
-    newBoxes.forEach(box => {
+        box.appendChild(img);
+        
+        // Sisipkan sebelum elemen trigger
         galleryContainer.insertBefore(box, triggerElement);
-    });
-
-    // 3. PENTING: Reset guard menggunakan timer
-    setTimeout(() => {
-        isLoading = false; 
-        
-        // Paksa reflow CSS Columns
-        if (galleryContainer) {
-            galleryContainer.style.opacity = '0.999';
-            galleryContainer.style.opacity = '1'; 
-        }
-
-    }, LOAD_RESET_DELAY); 
+    }
 }
 
-// Inisialisasi Intersection Observer (Primary Method)
+// Inisialisasi Intersection Observer untuk Infinite Scroll
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-        if (entry.isIntersecting && currentFilter !== 'all' && !isLoading) {
+        if (entry.isIntersecting && currentFilter !== 'all') {
             loadMoreImages();
         }
     });
 }, {
-    root: null, 
-    rootMargin: '500px', 
+    root: null, // viewport
+    rootMargin: '0px',
     threshold: 0.1
 });
 
+// Mulai mengamati elemen trigger
 if (triggerElement) {
     observer.observe(triggerElement);
 }
 
+// --- Fungsi Filter dan Navigasi ---
 
-// --- Logika Fallback Scroll Listener ---
-
-function handleScrollFallback() {
-    // Hanya aktif jika bukan di tab 'all'
-    if (currentFilter === 'all' || isLoading) return; 
-
-    const scrollHeight = document.documentElement.scrollHeight;
-    const scrollTop = document.documentElement.scrollTop;
-    const clientHeight = document.documentElement.clientHeight;
-
-    // Cek apakah user sudah berada di dekat bagian bawah halaman (dalam jarak SCROLL_THRESHOLD)
-    if (scrollTop + clientHeight >= scrollHeight - SCROLL_THRESHOLD) {
-        loadMoreImages();
-    }
-}
-
-// Tambahkan event listener untuk fallback
-window.addEventListener('scroll', handleScrollFallback);
-
-
-// --- Fungsi Filter TABS ---
-
+// Fungsi filter yang dimodifikasi untuk menangani tampilan Infinite Scroll
 function filterSelection(c, btn) {
     currentFilter = c;
     const allBoxes = Array.from(document.querySelectorAll('.container .box'));
-    
-    // 1. Perbarui tombol aktif
-    document.querySelectorAll("#tabs .btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
+    const boxesToHide = allBoxes.filter(box => !box.classList.contains(currentFilter));
+    const boxesToShow = allBoxes.filter(box => box.classList.contains(currentFilter));
 
-    // 2. Tampilkan/Sembunyikan Gambar Statis
-    initialBoxes.forEach(box => {
-        box.classList.remove('show');
-        if (c === 'all' || box.classList.contains(c)) {
+    if (c === 'all') {
+        // Tampilkan hanya 8 gambar statis (yang merupakan initialBoxes)
+        initialBoxes.forEach(box => {
             box.classList.add('show');
-        }
-    });
+        });
+        
+        // Hapus semua gambar yang dimuat oleh Infinite Scroll
+        allBoxes.forEach(box => {
+            if (!initialBoxes.includes(box)) {
+                box.remove();
+            }
+        });
 
-    // 3. Kelola Gambar Dinamis (Hapus gambar dari filter lama)
-    allBoxes.forEach(box => {
-        if (!initialBoxes.includes(box)) {
-            box.remove(); 
-        }
-    });
-    
-    // 4. Jika beralih ke kategori, muat batch gambar awal
-    if (c !== 'all') {
-         seedCounter[c] = 0; 
-         // Panggil loadMoreImages untuk memuat batch pertama
-         loadMoreImages(); 
     } else {
-        // Reset guard jika kembali ke 'All'
-        isLoading = false;
+        // Sembunyikan semua yang tidak sesuai filter
+        allBoxes.forEach(box => {
+            box.classList.remove('show');
+        });
+        // Tampilkan yang sesuai filter (ini mencakup 8 gambar statis yang cocok)
+        boxesToShow.forEach(box => {
+            box.classList.add('show');
+        });
+
+        // Hapus gambar dari filter lain yang tidak lagi diperlukan, 
+        // tapi pastikan 8 gambar statis dipertahankan
+        allBoxes.forEach(box => {
+            if (!initialBoxes.includes(box) && !box.classList.contains(c)) {
+                box.remove();
+            }
+        });
+        
+        // Memuat beberapa gambar awal untuk Infinite Scroll saat pertama kali beralih
+        if (document.querySelectorAll(`.container .box.${c}`).length <= initialBoxes.length / 4) {
+             loadMoreImages(); 
+        }
     }
     
-    // Paksa reflow
+    // Perbarui tombol aktif
+    const current = document.querySelector("#tabs .btn.active");
+    if (current) current.classList.remove("active");
+    if (btn) btn.classList.add("active");
+    
+    // Perlu pembaruan layout untuk menghindari masalah kolom
     setTimeout(() => {
-        if (galleryContainer) {
-            galleryContainer.style.opacity = '0.99'; 
-            galleryContainer.style.opacity = '1'; 
-        }
+        galleryContainer.style.display = 'none';
+        galleryContainer.offsetHeight; // force reflow
+        galleryContainer.style.display = 'block';
     }, 50); 
 }
 
-// --- Inisialisasi ---
-
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Pasang event listener ke tombol tab
-    document.querySelectorAll("#tabs .btn").forEach(button => {
-        button.addEventListener('click', function() {
-            filterSelection(this.getAttribute('data-filter'), this);
-        });
+// Tambahkan event listener ke tombol tab
+document.querySelectorAll("#tabs .btn").forEach(button => {
+    button.addEventListener('click', function() {
+        filterSelection(this.getAttribute('data-filter'), this);
     });
-    
-    // 2. Panggil filter 'all' saat startup
-    const defaultBtn = document.querySelector('#tabs .btn[data-filter="all"]');
-    if(defaultBtn) filterSelection('all', defaultBtn);
+});
+
+// Inisialisasi filter ke "All" saat halaman dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    filterSelection('all', document.querySelector('#tabs .btn.active'));
+    // Inisialisasi menu topnav (fungsi myFunction dari kode demo)
+    window.myFunction = function() {
+      var x = document.getElementById("myTopnav");
+      if (x.className === "topnav") {
+        x.className += " responsive";
+      } else {
+        x.className = "topnav";
+      }
+    }
 });
