@@ -18,6 +18,31 @@ let seedCounter = {
   identity: 0
 };
 
+// helper: append box dengan animasi fade-in yang benar
+function appendBoxWithFade(box) {
+  // box sudah memiliki kelas 'fade-in' (state awal)
+  if (triggerElement && galleryContainer.contains(triggerElement)) {
+    galleryContainer.insertBefore(box, triggerElement);
+  } else {
+    galleryContainer.appendChild(box);
+  }
+
+  // paksa frame berikutnya lalu tambahkan kelas 'show' untuk memicu transisi
+  requestAnimationFrame(() => {
+    // gunakan sedikit delay untuk stagger (opsional)
+    // setTimeout(() => box.classList.add('show'), 10);
+    box.classList.add("show");
+  });
+
+  // bersihkan kelas fade-in setelah transisi selesai (satu kali)
+  box.addEventListener("transitionend", (ev) => {
+    // pastikan kita menunggu property opacity/transform selesai
+    if (ev.propertyName === "opacity" || ev.propertyName === "transform") {
+      box.classList.remove("fade-in");
+    }
+  }, { once: true });
+}
+
 // --- Fungsi untuk memuat gambar baru ---
 function loadMoreImages() {
   if (currentFilter === "all") return;
@@ -31,27 +56,20 @@ function loadMoreImages() {
     const seed = `iscroll-${currentFilter}-${seedCounter[currentFilter]}`;
     const imageUrl = `${PICSUM_BASE_URL}/seed/${seed}/${randomSize}`;
 
-    // buat elemen box + gambar
+    // buat elemen box tanpa 'show' — hanya 'fade-in' sehingga kita bisa trigger transisi
     const box = document.createElement("div");
-    box.className = `box ${currentFilter} show fade-in`;
+    box.className = `box ${currentFilter} fade-in`; // NOTE: jangan tambahkan 'show' langsung
 
     const img = document.createElement("img");
     img.src = imageUrl;
     img.alt = `${currentFilter} photo ${seedCounter[currentFilter]}`;
 
-    // hilangkan efek fade-in setelah animasi selesai
-    img.onload = () => {
-      setTimeout(() => box.classList.remove("fade-in"), 600);
-    };
-
+    // ketika gambar load, kita sudah men-trigger show di appendBoxWithFade,
+    // tapi jika mau menunggu load sebelum show, bisa pindah logic ke onload.
+    // untuk responsif UX, kita akan tetap men-trigger show segera (gambar muncul saat load)
     box.appendChild(img);
 
-    // masukkan sebelum trigger jika ada, jika tidak append di akhir
-    if (triggerElement && galleryContainer.contains(triggerElement)) {
-      galleryContainer.insertBefore(box, triggerElement);
-    } else {
-      galleryContainer.appendChild(box);
-    }
+    appendBoxWithFade(box);
   }
 }
 
@@ -71,7 +89,6 @@ const observer = new IntersectionObserver(
   }
 );
 
-// pastikan trigger diamati
 if (triggerElement) {
   observer.observe(triggerElement);
 } else {
@@ -85,7 +102,7 @@ function filterSelection(c, btn) {
   const boxesToShow = allBoxes.filter((box) => box.classList.contains(c));
 
   if (c === "all") {
-    // tampilkan 8 gambar awal
+    // tampilkan 8 gambar awal (initialBoxes)
     initialBoxes.forEach((box) => box.classList.add("show"));
     allBoxes.forEach((box) => {
       if (!initialBoxes.includes(box)) box.remove();
@@ -93,13 +110,13 @@ function filterSelection(c, btn) {
   } else {
     // sembunyikan semua
     allBoxes.forEach((box) => box.classList.remove("show"));
-    // tampilkan yang cocok
+    // tampilkan yang cocok (existing)
     boxesToShow.forEach((box) => box.classList.add("show"));
-    // hapus gambar kategori lain
+    // hapus gambar kategori lain (hasil scroll)
     allBoxes.forEach((box) => {
       if (!initialBoxes.includes(box) && !box.classList.contains(c)) box.remove();
     });
-    // batch awal untuk kategori
+    // load initial batch for the category
     loadMoreImages();
   }
 
@@ -118,11 +135,29 @@ document.querySelectorAll("#tabs .btn").forEach((button) => {
 
 // --- Inisialisasi ---
 document.addEventListener("DOMContentLoaded", () => {
+  // berikan efek fade-in pada initialBoxes juga (stagger kecil untuk feel lebih baik)
+  initialBoxes.forEach((box, idx) => {
+    // jika box sudah show dari server, kita ingin animasi masuk
+    if (!box.classList.contains("fade-in")) box.classList.add("fade-in");
+    // tambahkan show sedikit bertahap
+    setTimeout(() => {
+      box.classList.add("show");
+      // hapus kelas fade-in saat transisi selesai
+      box.addEventListener("transitionend", (ev) => {
+        if (ev.propertyName === "opacity" || ev.propertyName === "transform") {
+          box.classList.remove("fade-in");
+        }
+      }, { once: true });
+    }, 50 * idx); // stagger 50ms per item (opsional)
+  });
+
   filterSelection("all", document.querySelector("#tabs .btn.active"));
+
   // menu responsif opsional
   window.myFunction = function () {
     const x = document.getElementById("myTopnav");
     x.className = x.className === "topnav" ? "topnav responsive" : "topnav";
   };
+
   if (triggerElement) triggerElement.style.minHeight = "100px";
 });
