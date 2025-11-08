@@ -1,7 +1,7 @@
 /*
 * FILE: assets/js/main.js
-* Deskripsi: Logika utama untuk filter galeri dan Infinite Scroll. 
-* Menggunakan timer 1 detik untuk reset 'isLoading' agar tidak macet (stuck).
+* Perbaikan Akhir V2: Menggunakan Intersection Observer sebagai primary
+* dan menambah Fallback Scroll Listener untuk mengatasi masalah stuck/macet.
 */
 
 // --- Konfigurasi ---
@@ -12,13 +12,13 @@ const INFINITE_SCROLL_CONFIG = {
   identity: ["2070/1380", "1887/2830"]
 };
 const LOAD_COUNT = 6; 
-const LOAD_RESET_DELAY = 1000; // PENTING: 1 detik delay untuk reset isLoading
+const LOAD_RESET_DELAY = 1000; // 1 detik delay untuk reset isLoading
+const SCROLL_THRESHOLD = 500; // Jarak (piksel) dari bawah halaman untuk memicu fallback
 
 // --- Variabel State dan DOM ---
 let currentFilter = 'all';
 const galleryContainer = document.getElementById('gallery-container');
 const triggerElement = document.getElementById('infinite-scroll-trigger');
-// Hapus referensi loadingSpinner
 const initialBoxes = Array.from(document.querySelectorAll('.container .box'));
 let seedCounter = { design: 0, branding: 0, identity: 0 }; 
 let isLoading = false; 
@@ -46,7 +46,6 @@ function createImageBox(category, size, seed) {
 // --- Logika Infinite Scroll ---
 
 function loadMoreImages() {
-    // Cek ganda: pastikan tidak ada loading yang sedang berjalan
     if (currentFilter === 'all' || isLoading) return; 
     
     isLoading = true; 
@@ -66,12 +65,10 @@ function loadMoreImages() {
     
     // 2. Sisipkan semua box baru ke DOM
     newBoxes.forEach(box => {
-        // Sisipkan sebelum elemen trigger
         galleryContainer.insertBefore(box, triggerElement);
     });
 
     // 3. PENTING: Reset guard menggunakan timer
-    // Ini solusi paling stabil untuk Picsum/cache agar scroll tidak stuck.
     setTimeout(() => {
         isLoading = false; 
         
@@ -84,23 +81,43 @@ function loadMoreImages() {
     }, LOAD_RESET_DELAY); 
 }
 
-// Inisialisasi Intersection Observer (Lebih sensitif)
+// Inisialisasi Intersection Observer (Primary Method)
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-        // Cek jika trigger terlihat, bukan 'all' filter, dan tidak sedang dalam proses loading
         if (entry.isIntersecting && currentFilter !== 'all' && !isLoading) {
             loadMoreImages();
         }
     });
 }, {
     root: null, 
-    rootMargin: '500px', // Margin diperbesar agar lebih sensitif di desktop/kolom CSS
+    rootMargin: '500px', 
     threshold: 0.1
 });
 
 if (triggerElement) {
     observer.observe(triggerElement);
 }
+
+
+// --- Logika Fallback Scroll Listener ---
+
+function handleScrollFallback() {
+    // Hanya aktif jika bukan di tab 'all'
+    if (currentFilter === 'all' || isLoading) return; 
+
+    const scrollHeight = document.documentElement.scrollHeight;
+    const scrollTop = document.documentElement.scrollTop;
+    const clientHeight = document.documentElement.clientHeight;
+
+    // Cek apakah user sudah berada di dekat bagian bawah halaman (dalam jarak SCROLL_THRESHOLD)
+    if (scrollTop + clientHeight >= scrollHeight - SCROLL_THRESHOLD) {
+        loadMoreImages();
+    }
+}
+
+// Tambahkan event listener untuk fallback
+window.addEventListener('scroll', handleScrollFallback);
+
 
 // --- Fungsi Filter TABS ---
 
@@ -130,6 +147,7 @@ function filterSelection(c, btn) {
     // 4. Jika beralih ke kategori, muat batch gambar awal
     if (c !== 'all') {
          seedCounter[c] = 0; 
+         // Panggil loadMoreImages untuk memuat batch pertama
          loadMoreImages(); 
     } else {
         // Reset guard jika kembali ke 'All'
