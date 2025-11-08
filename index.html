@@ -1,0 +1,30 @@
+---
+layout: default
+---
+<main>
+  <h2>I blend <b>Design & Functionality</b></br>to create something awesome,<br /> check my work below.</h2>
+
+  <div id="tabs">
+    <button class="btn active" onclick="filterSelection('all', this)" data-filter="all">All</button>
+    <button class="btn" onclick="filterSelection('design', this)" data-filter="design"> Design</button>
+    <button class="btn" onclick="filterSelection('branding', this)" data-filter="branding"> Branding</button>
+    <button class="btn" onclick="filterSelection('identity', this)" data-filter="identity"> Identity</button>
+  </div>
+
+  <div class="container" id="gallery-container">
+    {% assign all_images = site.data.gallery.all_images %}
+    {% assign current_index = 1 %}
+    
+    {% for group in all_images %}
+      {% for i in (1..group.count) %}
+        {% include box.html category=group.category size=group.size index=current_index %}
+        {% assign current_index = current_index | plus: 1 %}
+      {% endfor %}
+    {% endfor %}
+    
+    {% comment %} Element penanda untuk Intersection Observer / Infinite Scroll {% endcomment %}
+    <div id="infinite-scroll-trigger"></div>
+  </div>
+</main>
+
+<script src="{{ '/assets/js/main.js' | relative_url }}"></script>
