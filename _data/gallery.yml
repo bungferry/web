@@ -1,0 +1,34 @@
+picsum_base_url: "https://picsum.photos"
+
+# Data untuk tab "All" (8 gambar statis)
+all_images:
+  - category: "design"
+    size: "1999/1452"
+    count: 1
+  - category: "design"
+    size: "1931/1087"
+    count: 1
+  - category: "branding"
+    size: "1887/2831"
+    count: 2
+  - category: "branding"
+    size: "1964/2455"
+    count: 1
+  - category: "identity"
+    size: "2070/1380"
+    count: 2
+  - category: "identity"
+    size: "1887/2830"
+    count: 1
+
+# Konfigurasi untuk fitur Infinite Scroll
+infinite_scroll:
+  design:
+    - "1999/1452"
+    - "1931/1087"
+  branding:
+    - "1887/2831"
+    - "1964/2455"
+  identity:
+    - "2070/1380"
+    - "1887/2830"
